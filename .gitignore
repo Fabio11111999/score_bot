@@ -1,0 +1,23 @@
+# NOTE: The following cover the most common cases, but one may need to add more during the training.
+
+# Mac
+**/.DS_Store
+
+# Python environment
+.python-version
+.venv/
+*.pyc
+*.egg-info/
+
+# Python tools
+.cache/
+.mypy_cache/
+.pytest_cache/
+**/test-reports/
+**/coverage-reports/
+.coverage/
+commands.txt
+
+# JetBrains
+**/.idea/
+.idea/
