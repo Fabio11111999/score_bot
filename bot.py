@@ -1,4 +1,5 @@
 import time
+
 from collections import defaultdict
 
 import telebot
@@ -232,6 +233,7 @@ def assist(message: telebot.types.Message) -> None:
     result(message)
 
 
+
 def print_stats(message: telebot.types.Message):
     scorers: dict[int, int] = defaultdict(int)
     assists: dict[int, int] = defaultdict(int)
@@ -253,6 +255,7 @@ def print_stats(message: telebot.types.Message):
             f"{ball_emoji * scorers[black_player] + assist_emoji * assists[black_player]}"
         )
     bot.send_message(message.chat.id, text, parse_mode="Markdown")
+
 
 
 @bot.message_handler(commands=["rollback"])
