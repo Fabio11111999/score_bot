@@ -1,5 +1,4 @@
 import time
-
 from collections import defaultdict
 
 import telebot
@@ -46,7 +45,7 @@ def setup_match(message: telebot.types.Message) -> None:
 def register_team(message: telebot.types.Message, color: str) -> None:
     text = f"*Team {color}*: " + message.text
     bot.send_message(message.chat.id, text, parse_mode="Markdown")
-    if len(message.text.split(" ")) != 5:
+    if len(message.text.split(" ")) == 0:
         bot.send_message(
             message.chat.id, "*Wrong number of players!*", parse_mode="Markdown"
         )
@@ -233,7 +232,6 @@ def assist(message: telebot.types.Message) -> None:
     result(message)
 
 
-
 def print_stats(message: telebot.types.Message):
     scorers: dict[int, int] = defaultdict(int)
     assists: dict[int, int] = defaultdict(int)
@@ -255,7 +253,6 @@ def print_stats(message: telebot.types.Message):
             f"{ball_emoji * scorers[black_player] + assist_emoji * assists[black_player]}"
         )
     bot.send_message(message.chat.id, text, parse_mode="Markdown")
-
 
 
 @bot.message_handler(commands=["rollback"])
