@@ -129,8 +129,8 @@ def show_goals_assists_buttons(
     )
 
 
-def get_time_message(message: telebot.types.Message) -> str:
-    elapsed_seconds = int(time.time() - current_games[message.chat.id].start_time)
+def get_time_message(chat_id: int) -> str:
+    elapsed_seconds = int(time.time() - current_games[chat_id].start_time)
     hours = elapsed_seconds // 3600
     minutes = (elapsed_seconds % 3600) // 60
     seconds = elapsed_seconds % 60
@@ -147,14 +147,14 @@ def get_time_message(message: telebot.types.Message) -> str:
 
 @bot.message_handler(commands=["time"])
 def get_time(message: telebot.types.Message) -> None:
-    bot.send_message(message.chat.id, get_time_message(message), parse_mode="Markdown")
+    bot.send_message(message.chat.id, get_time_message(message.chat.id), parse_mode="Markdown")
 
 
 @bot.message_handler(commands=["result"])
 def result(message: telebot.types.Message) -> None:
-    text = get_time_message(message)
+    text = get_time_message(message.chat.id)
     score_white = 0
-    for scorer, timestamp in zip(current_games[message.chat.id].scorers, current_games[message.chat.id].time_stamps):
+    for scorer in current_games[message.chat.id].scorers:
         if scorer in current_games[message.chat.id].white_team or scorer == "own_black":
             score_white += 1
     text += (
@@ -187,7 +187,7 @@ def scoreboard(message: telebot.types.Message) -> None:
 @bot.message_handler(commands=["end_match"])
 def end_match(message: telebot.types.Message) -> None:
     scoreboard(message)
-    print_stats(message)
+    print_stats(message.chat.id)
     reset(message)
 
 
@@ -233,27 +233,27 @@ def assist(message: telebot.types.Message) -> None:
     result(message)
 
 
-def print_stats(message: telebot.types.Message):
+def print_stats(chat_id: int):
     scorers: dict[int, int] = defaultdict(int)
     assists: dict[int, int] = defaultdict(int)
-    for s, a in zip(current_games[message.chat.id].scorers, current_games[message.chat.id].assists):
+    for s, a in zip(current_games[chat_id].scorers, current_games[chat_id].assists):
         if s == "own_black" or s == "own_white":
             continue
         scorers[s] += 1
         if a != "none":
             assists[a] += 1
     text = "*Stats:*"
-    for white_player in current_games[message.chat.id].white_team:
+    for white_player in current_games[chat_id].white_team:
         text += (
             f"\n{white_square}{white_player}: "
             f"{ball_emoji * scorers[white_player] + assist_emoji * assists[white_player]}"
         )
-    for black_player in current_games[message.chat.id].black_team:
+    for black_player in current_games[chat_id].black_team:
         text += (
             f"\n{black_square}{black_player}: "
             f"{ball_emoji * scorers[black_player] + assist_emoji * assists[black_player]}"
         )
-    bot.send_message(message.chat.id, text, parse_mode="Markdown")
+    bot.send_message(chat_id, text, parse_mode="Markdown")
 
 
 @bot.message_handler(commands=["rollback"])
