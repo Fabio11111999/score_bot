@@ -1,7 +1,8 @@
+import time
+import telebot
+
 from collections import defaultdict
 from game import Game
-
-import telebot
 from telebot import types
 
 BOT_TOKEN = "6480255635:AAHhat4oFJVwn03f9XJb7sFMADJb177vgTA"
@@ -72,7 +73,11 @@ def start_match(message: telebot.types.Message) -> None:
 
 @bot.message_handler(commands=["time"])
 def get_time(message: telebot.types.Message) -> None:
-    bot.send_message(message.chat.id, current_games[message.chat.id].get_time_message(), parse_mode="Markdown")
+    bot.send_message(
+        message.chat.id,
+        current_games[message.chat.id].get_time_message(),
+        parse_mode="Markdown",
+    )
 
 
 @bot.message_handler(commands=["result"])
@@ -96,7 +101,10 @@ def scoreboard(message: telebot.types.Message) -> None:
     result(message)
     text = ""
     score_white, score_black = 0, 0
-    for scorer, timestamp in zip(current_games[message.chat.id].scorers, current_games[message.chat.id].time_stamps):
+    for scorer, timestamp in zip(
+        current_games[message.chat.id].scorers,
+        current_games[message.chat.id].time_stamps,
+    ):
         square = black_square
         if scorer in current_games[message.chat.id].white_team or scorer == "own_black":
             square = white_square
@@ -130,12 +138,16 @@ def end_match(message: telebot.types.Message) -> None:
 def goal(message: telebot.types.Message) -> None:
     player = message.text[1:][1:-1]
     current_games[message.chat.id].scorers.append(player)
-    current_games[message.chat.id].time_stamps.append((time.time() - current_games[message.chat.id].start_time) // 60)
+    current_games[message.chat.id].time_stamps.append(
+        (time.time() - current_games[message.chat.id].start_time) // 60
+    )
     result(message)
     show_goals_assists_buttons(
         message.chat.id,
         goals=False,
-        team="white" if player in current_games[message.chat.id].white_team else "black",
+        team=(
+            "white" if player in current_games[message.chat.id].white_team else "black"
+        ),
         scorer=player,
     )
 
@@ -204,7 +216,8 @@ def show_goals_assists_buttons(
             f"{white_square}{white_player}{ball_emoji if goals else assist_emoji}"
         )
         for white_player in (
-            current_games[chat_id].white_team + ["none" if goals is False else "own_black"]
+            current_games[chat_id].white_team
+            + ["none" if goals is False else "own_black"]
         )
         if scorer != white_player
     ]
@@ -214,7 +227,8 @@ def show_goals_assists_buttons(
             f"{black_square}{black_player}{ball_emoji if goals else assist_emoji}"
         )
         for black_player in (
-            current_games[chat_id].black_team + ["none" if goals is False else "own_white"]
+            current_games[chat_id].black_team
+            + ["none" if goals is False else "own_white"]
         )
         if scorer != black_player
     ]

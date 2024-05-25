@@ -1,5 +1,6 @@
 import time
 
+
 class Game:
     def __init__(self):
         self.white_team, self.black_team = [], []
