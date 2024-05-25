@@ -21,3 +21,6 @@ commands.txt
 # JetBrains
 **/.idea/
 .idea/
+
+#ASDF
+.tool-versions
