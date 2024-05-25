@@ -1,23 +1,11 @@
-import time
 from collections import defaultdict
+from game import Game
 
 import telebot
 from telebot import types
 
 BOT_TOKEN = "6480255635:AAHhat4oFJVwn03f9XJb7sFMADJb177vgTA"
 ball_emoji, assist_emoji = "⚽", "🎯"
-
-
-class Game:
-    def __init__(self):
-        self.white_team, self.black_team = [], []
-        self.start_time = None
-        self.scorers, self.assists, self.time_stamps = [], [], []
-        self.started = False
-
-    def start(self) -> None:
-        self.start_time = time.time()
-        self.started = True
 
 
 current_games: dict[int, Game] = {}
@@ -79,80 +67,17 @@ def ask_teams(message: telebot.types.Message) -> None:
 def start_match(message: telebot.types.Message) -> None:
     bot.send_message(message.chat.id, "Started match!", parse_mode="Markdown")
     current_games[message.chat.id].start()
-    show_goals_assists_buttons(message)
-
-
-def show_goals_assists_buttons(
-    message: telebot.types.Message,
-    goals: bool = True,
-    team: str = "white",
-    scorer: str = "",
-) -> None:
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    white_buttons = [
-        types.KeyboardButton(
-            f"{white_square}{white_player}{ball_emoji if goals else assist_emoji}"
-        )
-        for white_player in (
-            current_games[message.chat.id].white_team + ["none" if goals is False else "own_black"]
-        )
-        if scorer != white_player
-    ]
-
-    black_buttons = [
-        types.KeyboardButton(
-            f"{black_square}{black_player}{ball_emoji if goals else assist_emoji}"
-        )
-        for black_player in (
-            current_games[message.chat.id].black_team + ["none" if goals is False else "own_white"]
-        )
-        if scorer != black_player
-    ]
-    if goals is False:
-        if team == "white":
-            black_buttons = []
-        else:
-            white_buttons = []
-
-    items = white_buttons + black_buttons
-    if goals is True:
-        items.append(types.KeyboardButton("/rollback"))
-        items.append(types.KeyboardButton("/end_match"))
-        items.append(types.KeyboardButton("/time"))
-        items.append(types.KeyboardButton("/result"))
-        items.append(types.KeyboardButton("/scoreboard"))
-    markup.add(*items)
-    bot.send_message(
-        message.chat.id,
-        "Select Scorer:" if goals is True else "Select Assister:",
-        reply_markup=markup,
-    )
-
-
-def get_time_message(chat_id: int) -> str:
-    elapsed_seconds = int(time.time() - current_games[chat_id].start_time)
-    hours = elapsed_seconds // 3600
-    minutes = (elapsed_seconds % 3600) // 60
-    seconds = elapsed_seconds % 60
-    return (
-        "*Current Time:* `"
-        + str(hours)
-        + "h"
-        + str(minutes)
-        + "m"
-        + str(seconds)
-        + "s`"
-    )
+    show_goals_assists_buttons(message.chat.id)
 
 
 @bot.message_handler(commands=["time"])
 def get_time(message: telebot.types.Message) -> None:
-    bot.send_message(message.chat.id, get_time_message(message.chat.id), parse_mode="Markdown")
+    bot.send_message(message.chat.id, current_games[message.chat.id].get_time_message(), parse_mode="Markdown")
 
 
 @bot.message_handler(commands=["result"])
 def result(message: telebot.types.Message) -> None:
-    text = get_time_message(message.chat.id)
+    text = current_games[message.chat.id].get_time_message()
     score_white = 0
     for scorer in current_games[message.chat.id].scorers:
         if scorer in current_games[message.chat.id].white_team or scorer == "own_black":
@@ -208,7 +133,7 @@ def goal(message: telebot.types.Message) -> None:
     current_games[message.chat.id].time_stamps.append((time.time() - current_games[message.chat.id].start_time) // 60)
     result(message)
     show_goals_assists_buttons(
-        message,
+        message.chat.id,
         goals=False,
         team="white" if player in current_games[message.chat.id].white_team else "black",
         scorer=player,
@@ -229,7 +154,18 @@ def goal(message: telebot.types.Message) -> None:
 def assist(message: telebot.types.Message) -> None:
     player = message.text[1:][1:-1]
     current_games[message.chat.id].assists.append(player)
-    show_goals_assists_buttons(message, goals=True)
+    show_goals_assists_buttons(message.chat.id, goals=True)
+    result(message)
+
+
+@bot.message_handler(commands=["rollback"])
+def rollback(message: telebot.types.Message) -> None:
+    if len(current_games[message.chat.id].scorers) == 0:
+        bot.send_message(message.chat.id, "*No scores yet!*", parse_mode="Markdown")
+        return
+    current_games[message.chat.id].scorers.pop()
+    current_games[message.chat.id].time_stamps.pop()
+    current_games[message.chat.id].assists.pop()
     result(message)
 
 
@@ -256,15 +192,51 @@ def print_stats(chat_id: int):
     bot.send_message(chat_id, text, parse_mode="Markdown")
 
 
-@bot.message_handler(commands=["rollback"])
-def rollback(message: telebot.types.Message) -> None:
-    if len(current_games[message.chat.id].scorers) == 0:
-        bot.send_message(message.chat.id, "*No scores yet!*", parse_mode="Markdown")
-        return
-    current_games[message.chat.id].scorers.pop()
-    current_games[message.chat.id].time_stamps.pop()
-    current_games[message.chat.id].assists.pop()
-    result(message)
+def show_goals_assists_buttons(
+    chat_id: int,
+    goals: bool = True,
+    team: str = "white",
+    scorer: str = "",
+) -> None:
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    white_buttons = [
+        types.KeyboardButton(
+            f"{white_square}{white_player}{ball_emoji if goals else assist_emoji}"
+        )
+        for white_player in (
+            current_games[chat_id].white_team + ["none" if goals is False else "own_black"]
+        )
+        if scorer != white_player
+    ]
+
+    black_buttons = [
+        types.KeyboardButton(
+            f"{black_square}{black_player}{ball_emoji if goals else assist_emoji}"
+        )
+        for black_player in (
+            current_games[chat_id].black_team + ["none" if goals is False else "own_white"]
+        )
+        if scorer != black_player
+    ]
+    if goals is False:
+        if team == "white":
+            black_buttons = []
+        else:
+            white_buttons = []
+
+    items = white_buttons + black_buttons
+    if goals is True:
+        items.append(types.KeyboardButton("/rollback"))
+        items.append(types.KeyboardButton("/end_match"))
+        items.append(types.KeyboardButton("/time"))
+        items.append(types.KeyboardButton("/result"))
+        items.append(types.KeyboardButton("/scoreboard"))
+    markup.add(*items)
+    bot.send_message(
+        chat_id,
+        "Select Scorer:" if goals is True else "Select Assister:",
+        reply_markup=markup,
+    )
 
 
 if __name__ == "__main__":
